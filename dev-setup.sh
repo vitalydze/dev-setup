@@ -357,7 +357,7 @@ fi
 for dir in /srv/projects/*/; do
   [[ -d ${dir}.git ]] || continue
   name=$(basename "$dir")
-  cmd="while true; do \$HOME/.local/bin/claude remote-control --spawn worktree --remote-control-session-name-prefix $name; echo; echo 'Remote Control остановлен, перезапуск через 15 с'; sleep 15; done"
+  cmd="while true; do \$HOME/.local/bin/claude remote-control --spawn same-dir --remote-control-session-name-prefix $name; echo; echo 'Remote Control остановлен, перезапуск через 15 с'; sleep 15; done"
   if ! tmux has-session -t rc 2>/dev/null; then
     # 9>&- — иначе запущенный здесь tmux-сервер унаследует блокировку и будет держать её вечно
     tmux new-session -d -s rc -n "$name" -c "$dir" "$cmd" 9>&-
@@ -434,14 +434,17 @@ rc_wait() {
 }
 
 start_rc() {
+  local old
+  old=$(cat "$RC_START" 2>/dev/null || true)
   write_rc_start
   if ! compgen -G "$PROJECTS_DIR/*/.git" >/dev/null; then
     say "Проектов нет — Remote Control запустится сам, когда в $PROJECTS_DIR появится репозиторий"
     return 0
   fi
   trust_projects
-  if rc_running && ! { rc_managed && rc_has_docker; }; then
-    say "Remote Control был запущен вручную или без доступа к Docker — перезапускаю"
+  # rc-start изменился (новая версия скрипта) — перезапускаем, иначе окна работают по-старому
+  if rc_running && ! { rc_managed && rc_has_docker && [[ $old == "$(cat "$RC_START")" ]]; }; then
+    say "Remote Control был запущен вручную, без доступа к Docker или со старыми настройками — перезапускаю"
     rc_stop
   fi
   "$RC_START" >>"$LOG" 2>&1 || true
