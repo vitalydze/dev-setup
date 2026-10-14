@@ -5,7 +5,7 @@
 ```
 телефон, claude.ai/code --Remote Control--> Claude на сервере --> проекты в /srv/projects
 IntelliJ на компьютере  --SSH-------------> те же проекты
-GitHub Actions          --SSH-------------> docker compose на сервере
+GitHub Actions          --SSH-------------> docker compose в /srv/deploy
 ```
 
 ## Что получится
@@ -14,6 +14,7 @@ GitHub Actions          --SSH-------------> docker compose на сервере
 - **Пользователь для IntelliJ** (по умолчанию `work`): вход только по SSH-ключу, без sudo.
 - **Пользователь для GitHub Actions** (по умолчанию `github`): вход только по ключу, без sudo, есть доступ к Docker для `docker compose up` и `down`. Ключ скрипт создаёт сам и печатает в конце.
 - Общая папка проектов `/srv/projects`: пользователи Claude и IntelliJ правят файлы друг друга.
+- Папка деплоя `/srv/deploy`: GitHub Actions выкладывает сюда проекты, в workflow укажи путь `/srv/deploy/<проект>`. Пишет только пользователь GitHub Actions, остальные читают.
 - JDK 21, Maven, Docker.
 - Коммиты от имени владельца GitHub-аккаунта, без подписи Claude.
 
@@ -90,6 +91,7 @@ sudo -u work -H sh -c 'umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys
 - `/etc/dev-setup.conf` — имена пользователей
 - `/root/dev-setup.log` — лог установки
 - `/srv/projects` — проекты
+- `/srv/deploy` — проекты, выложенные GitHub Actions
 - `/home/github/.ssh/deploy_key` — приватный ключ для GitHub Actions, его публичная часть — в `authorized_keys` рядом
 - `/usr/local/bin/rc-start` — сторож Remote Control: запускается при загрузке и каждые 5 минут, лог — `~/rc-start.log` пользователя Claude
 

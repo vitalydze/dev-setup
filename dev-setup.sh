@@ -19,6 +19,7 @@
 #   • пользователь для GitHub Actions (по умолчанию github) — вход только по ключу, без sudo,
 #     доступ к Docker для docker compose; ключ скрипт создаёт сам и печатает в конце
 #   • claude и work в группах dev и docker; /srv/projects — их общая папка
+#   • /srv/deploy — сюда GitHub Actions выкладывает проекты: /srv/deploy/<проект>
 #   • JDK 21, Maven, Docker; коммиты от владельца GitHub-аккаунта, подписи Claude нет
 
 set -euo pipefail
@@ -26,6 +27,7 @@ set -euo pipefail
 CONF=/etc/dev-setup.conf   # имена пользователей, чтобы повторный запуск не спрашивал их снова
 DEV_GROUP=dev
 PROJECTS_DIR=/srv/projects
+DEPLOY_DIR=/srv/deploy
 RC_START=/usr/local/bin/rc-start
 LOG=/root/dev-setup.log
 STEP=0 TOTAL=10 GH_LOGIN="" NEW_GITHUB_KEY=0
@@ -180,6 +182,10 @@ setup_users() {
   chmod 2775 "$PROJECTS_DIR"
   setfacl -d -m "g:$DEV_GROUP:rwX" "$PROJECTS_DIR"
   say "$PROJECTS_DIR — общая папка $CLAUDE_USER и $WORK_USER"
+
+  # папка деплоя: пишет только GitHub Actions, папку проекта внутри деплой создаёт сам
+  install -d -o "$GITHUB_USER" -g "$GITHUB_USER" -m 755 "$DEPLOY_DIR"
+  say "$DEPLOY_DIR — папка деплоя, пишет $GITHUB_USER"
 
   # пользователя Claude по SSH не пускаем
   local conf=/etc/ssh/sshd_config.d/10-deny-$CLAUDE_USER.conf
@@ -463,7 +469,7 @@ summary() {
   say "Телефон: Claude → Code → сессия <проект>-… с зелёной точкой"
   say "$CLAUDE_USER: без пароля и SSH. Зайти: sudo -iu $CLAUDE_USER (выйти: exit)"
   say "$WORK_USER: без пароля и sudo, вход по ключу: ssh $WORK_USER@<сервер>. Отсюда: sudo -iu $WORK_USER"
-  say "$GITHUB_USER: без пароля и sudo, вход по ключу, доступ к Docker — для GitHub Actions"
+  say "$GITHUB_USER: без пароля и sudo, вход по ключу, доступ к Docker — для GitHub Actions, деплой в $DEPLOY_DIR/<проект>"
   say "Экран Remote Control: sudo -iu $CLAUDE_USER tmux attach -t rc (выйти: Ctrl+B, затем d)"
   say "Ещё проекты: запусти скрипт снова. Лог установки: $LOG"
 }
